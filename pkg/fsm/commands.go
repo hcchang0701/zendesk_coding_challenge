@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"encoding/json"
+	"errors"
 )
 
 var (
@@ -30,7 +31,7 @@ func list() {
 
 	tickets, meta, err = getTicketsWithCursor("", "")
 	if err != nil {
-		fmt.Println("Faile to get tickets")
+		fmt.Println("Failed to get tickets:", err)
 		os.Exit(1)
 	}
 
@@ -43,7 +44,7 @@ func prev() {
 	if meta.HasMore {
 		tickets, meta, err = getTicketsWithCursor(meta.BeforeCursor, "")
 		if err != nil {
-			fmt.Println("Faile to get tickets")
+			fmt.Println("Failed to get tickets:", err)
 			os.Exit(1)
 		}
 	}
@@ -56,7 +57,7 @@ func next() {
 	if meta.HasMore {
 		tickets, meta, err = getTicketsWithCursor("", meta.AfterCursor)
 		if err != nil {
-			fmt.Println("Faile to get tickets")
+			fmt.Println("Failed to get tickets:", err)
 			os.Exit(1)
 		}
 	}
@@ -92,22 +93,22 @@ func getTicketsWithCursor(before, after string) ([]*Ticket, *Meta, error) {
 
 	resp, err := client.Do(request)
 	if err != nil {
-		fmt.Println("Failed to make a HTTP request:", err)
-		return nil, nil, nil
+		err = errors.New("Failed to make a HTTP request: " + err.Error())
+		return nil, nil, err
 	}
 
 	defer resp.Body.Close()
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Failed to read API response", err)
-		return nil, nil, nil
+		err = errors.New("Failed to read API response: " + err.Error())
+		return nil, nil, err
 	}
 
 	var result ticketResp
 	err = json.Unmarshal(respBody, &result)
 	if err != nil {
-		fmt.Println("Failed to parse API response", err)
-		return nil, nil, nil
+		err = errors.New("Failed to parse API response: " + err.Error())
+		return nil, nil, err
 	}
 
 	return result.Tickets, &result.Meta, nil

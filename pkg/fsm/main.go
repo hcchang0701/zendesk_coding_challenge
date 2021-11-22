@@ -45,7 +45,6 @@ func Run() {
 		fmt.Println(helpMessages[state])
 
 		var command string
-		//command = "list"
 		fmt.Scan(&command)
 
 		if err := execute(command); err != nil {
