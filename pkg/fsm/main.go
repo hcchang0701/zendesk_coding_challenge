@@ -42,14 +42,10 @@ func init() {
 }
 
 func Run() {
-
 	for {
-		// print some words
 		fmt.Println(helpMessages[state])
-
 		input := bufio.NewReader(os.Stdin)
 		command, _ := input.ReadString('\n')
-
 		if err := execute(command); err != nil {
 			return
 		}
@@ -58,7 +54,7 @@ func Run() {
 
 func execute(command string) error {
 
-	// normalize
+	// extract first word
 	cmd := regexp.MustCompile(`[a-z]+`).FindString(command)
 	if _, valid := commands[state][cmd]; !valid {
 		fmt.Printf("Error: command unsupported: \"%s\"", cmd)
