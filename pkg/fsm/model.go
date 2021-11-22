@@ -7,7 +7,7 @@ import (
 
 type ticketResp struct {
 	Tickets []*Ticket `json:"tickets"`
-	Meta `json:"meta"`
+	Meta    `json:"meta"`
 }
 
 type Ticket struct {

@@ -1,8 +1,11 @@
 package fsm
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -44,8 +47,8 @@ func Run() {
 		// print some words
 		fmt.Println(helpMessages[state])
 
-		var command string
-		fmt.Scan(&command)
+		input := bufio.NewReader(os.Stdin)
+		command, _ := input.ReadString('\n')
 
 		if err := execute(command); err != nil {
 			return
@@ -56,9 +59,7 @@ func Run() {
 func execute(command string) error {
 
 	// normalize
-	re := regexp.MustCompile(`[a-z]+`)
-	cmd := re.FindString(command)
-
+	cmd := regexp.MustCompile(`[a-z]+`).FindString(command)
 	if _, valid := commands[state][cmd]; !valid {
 		fmt.Printf("Error: command unsupported: \"%s\"", cmd)
 		time.Sleep(2 * time.Second)
@@ -81,14 +82,20 @@ func execute(command string) error {
 		case "next":
 			next()
 		case "selc":
-			state = viewOne
+			str := regexp.MustCompile(`[1-9]\d*`).FindString(command)
+			num, _ := strconv.Atoi(str)
+			if valid := selc(num); valid {
+				state = viewOne
+			} else {
+				time.Sleep(2 * time.Second)
+			}
 		case "quit":
 			quit()
 		}
 	case viewOne:
 		switch cmd {
 		case "back":
-			list()
+			back()
 			state = listAll
 		case "quit":
 			quit()
