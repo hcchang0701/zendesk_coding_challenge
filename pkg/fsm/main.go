@@ -15,6 +15,7 @@ const (
 	initial states = iota
 	listAll
 	viewOne
+	quitNow
 )
 
 var commands = map[states]map[string]struct{}{
@@ -37,17 +38,19 @@ var helpMessages = map[states]string{
 
 var state states
 
-func init() {
-	state = initial
-}
-
 func Run() {
+	setup()
+
 	for {
+		if state == quitNow {
+			return
+		}
 		fmt.Println(helpMessages[state])
 		input := bufio.NewReader(os.Stdin)
 		command, _ := input.ReadString('\n')
 		if err := execute(command); err != nil {
-			return
+			fmt.Println(err)
+			os.Exit(1)
 		}
 	}
 }
@@ -58,7 +61,7 @@ func execute(command string) error {
 	cmd := regexp.MustCompile(`[a-z]+`).FindString(command)
 	if _, valid := commands[state][cmd]; !valid {
 		fmt.Printf("Error: command unsupported: \"%s\"", cmd)
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		return nil
 	}
 
@@ -66,35 +69,44 @@ func execute(command string) error {
 	case initial:
 		switch cmd {
 		case "list":
-			list()
+			if err := tt.list(); err != nil {
+				return err
+			}
 			state = listAll
 		case "quit":
-			quit()
+			tt.quit()
+			state = quitNow
 		}
 	case listAll:
 		switch cmd {
 		case "prev":
-			prev()
+			if err := tt.prev(); err != nil {
+				return err
+			}
 		case "next":
-			next()
+			if err := tt.next(); err != nil {
+				return err
+			}
 		case "selc":
 			str := regexp.MustCompile(`[1-9]\d*`).FindString(command)
 			num, _ := strconv.Atoi(str)
-			if valid := selc(num); valid {
+			if valid := tt.selc(num); valid {
 				state = viewOne
 			} else {
 				time.Sleep(2 * time.Second)
 			}
 		case "quit":
-			quit()
+			tt.quit()
+			state = quitNow
 		}
 	case viewOne:
 		switch cmd {
 		case "back":
-			back()
+			tt.back()
 			state = listAll
 		case "quit":
-			quit()
+			tt.quit()
+			state = quitNow
 		}
 	}
 

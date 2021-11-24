@@ -57,13 +57,16 @@ type Ticket struct {
 
 func (t *Ticket) String() string {
 
-	str := fmt.Sprintf("#%d %s [stat: %s]", t.ID, t.Subject, t.Status)
+	str := fmt.Sprintf("#%d %s", t.ID, t.Subject)
 
+	if t.Status != "" {
+		str += fmt.Sprintf(" [stat: %s]", t.Status)
+	}
 	if t.Type != nil {
-		str += fmt.Sprintf("[type: %v]", t.Type)
+		str += fmt.Sprintf(" [type: %v]", t.Type)
 	}
 	if t.Priority != nil {
-		str += fmt.Sprintf("[pri: %v]", t.Priority)
+		str += fmt.Sprintf(" [pri: %v]", t.Priority)
 	}
 
 	return str + "\n"

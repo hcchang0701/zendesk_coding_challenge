@@ -17,14 +17,16 @@ var (
 	client   *http.Client
 	baseURL  *url.URL
 	username string
-	password string
+	apitoken string
 	tickets  []*Ticket
 	meta     *Meta
 	err      error
+	tf       ITicketFetcher
+	tt       ITransitionFunctions
 )
 
-func init() {
-	
+func setup() {
+
 	client = &http.Client{}
 	baseURL, _ = url.Parse("https://zcchcc.zendesk.com")
 
@@ -33,49 +35,58 @@ func init() {
 		fmt.Println("Failed to load env file:", err)
 		os.Exit(1)
 	}
-	username = os.Getenv("ZENDESK_USERNAME")
-	password = os.Getenv("ZENDESK_PASSWORD")
+	username = os.Getenv("ZENDESK_USERNAME") + "/token"
+	apitoken = os.Getenv("ZENDESK_APITOKEN")
+
+	tf = new(ticketFetcher)
+	tt = new(transition)
 }
 
-func list() {
+type transition struct{}
 
-	tickets, meta, err = getTicketsWithCursor("", "")
+var _ ITransitionFunctions = (*transition)(nil)
+
+func (t *transition) list() error {
+
+	tickets, meta, err = tf.getTicketsWithCursor("", "")
 	if err != nil {
-		fmt.Println("failed to get tickets:", err)
-		os.Exit(1)
+		return errors.New("failed to get tickets:" + err.Error())
 	}
 
 	ticketString := fmt.Sprint(tickets)
 	fmt.Println("\n", ticketString[1:len(ticketString)-1])
+	return nil
 }
 
-func prev() {
+func (t *transition) prev() error {
 
 	if meta.HasMore {
-		tickets, meta, err = getTicketsWithCursor(meta.BeforeCursor, "")
+		tickets, meta, err = tf.getTicketsWithCursor(meta.BeforeCursor, "")
 		if err != nil {
-			fmt.Println("failed to get tickets:", err)
-			os.Exit(1)
+			return errors.New("failed to get tickets:" + err.Error())
 		}
 	}
+
 	ticketString := fmt.Sprint(tickets)
 	fmt.Println("\n", ticketString[1:len(ticketString)-1])
+	return nil
 }
 
-func next() {
+func (t *transition) next() error {
 
 	if meta.HasMore {
-		tickets, meta, err = getTicketsWithCursor("", meta.AfterCursor)
+		tickets, meta, err = tf.getTicketsWithCursor("", meta.AfterCursor)
 		if err != nil {
-			fmt.Println("failed to get tickets:", err)
-			os.Exit(1)
+			return errors.New("failed to get tickets:" + err.Error())
 		}
 	}
+
 	ticketString := fmt.Sprint(tickets)
 	fmt.Println("\n", ticketString[1:len(ticketString)-1])
+	return nil
 }
 
-func selc(num int) bool {
+func (t *transition) selc(num int) bool {
 
 	i := sort.Search(len(tickets), func(i int) bool { return tickets[i].ID <= num })
 	if i == len(tickets) || tickets[i].ID != num {
@@ -92,17 +103,20 @@ func selc(num int) bool {
 	return true
 }
 
-func back() {
+func (t *transition) back() {
 	ticketString := fmt.Sprint(tickets)
 	fmt.Println("\n", ticketString[1:len(ticketString)-1])
 }
 
-func quit() {
+func (t *transition) quit() {
 	fmt.Println("Have a good one!")
-	os.Exit(0)
 }
 
-func getTicketsWithCursor(before, after string) ([]*Ticket, *Meta, error) {
+type ticketFetcher struct{}
+
+var _ ITicketFetcher = (*ticketFetcher)(nil)
+
+func (t *ticketFetcher) getTicketsWithCursor(before, after string) ([]*Ticket, *Meta, error) {
 
 	baseURL.Path = "/api/v2/tickets.json"
 	params := url.Values{}
@@ -119,7 +133,7 @@ func getTicketsWithCursor(before, after string) ([]*Ticket, *Meta, error) {
 	baseURL.RawQuery = params.Encode()
 
 	request, _ := http.NewRequest(http.MethodGet, baseURL.String(), nil)
-	request.SetBasicAuth(username, password)
+	request.SetBasicAuth(username, apitoken)
 
 	resp, err := client.Do(request)
 	if err != nil {
